@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Docker Tutorial</title>
+    <link type="text/css" rel="stylesheet" href="assets/css/bootstrap.css"/>
+    <style>
+      body {
+        background-color: #f6f6f6;
+        padding-top: 30px;
+      }
+      .main {
+        background-color: #fff;
+        border: 1px solid #CCC;
+        padding: 40px;
+      }
+      .container {
+        width: 1100px;
+      }
+      .nav-list {
+        font-size: 17px;
+      }
+      .nav-header {
+        font-size: 17px;
+        text-transform: none;
+        line-height: 30px;
+      }
+    </style>
+    <link type="text/css" rel="stylesheet" href="assets/css/bootstrap-responsive.css"/>
+    <link type="text/css" rel="stylesheet" href="assets/css/hljs-github.min.css"/>
+  </head>
+<body>
+
+  <div class="container-fluid">
+    <div class="row-fluid">
+      <div class="span3"><ul class="nav nav-list">
+    <li><a href="#docker-tutorial">Docker Tutorial</a></li>
+    <li><a href="#prerequisites">Prerequisites</a></li>
+    <li><a href="#cowsay">Cowsay</a></li>
+    <li><a href="#creating-an-image">Creating an Image</a></li>
+    <li><a href="#using-a-dockerfile">Using a Dockerfile</a></li>
+    <li><a href="#using-an-entrypoint">Using an Entrypoint</a></li>
+    <li><a href="#saving-images">Saving images</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+    <li><a href="#further-reading">Further Reading</a></li>
+</ul>
+      </div>
+      <div class="span9 main"><p><a href="http://www.trifork.nl"><img src="http://photos4.meetupstatic.com/photos/theme_head/a/7/0/e/full_6762766.jpeg"nm width="100%"/></a></p>
+<h1 id="docker-tutorial">Docker Tutorial</h1>
+<p>This is a short tutorial designed to take you through the steps of creating and
+using a simple Docker image. </p>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>You should have already installed Docker or boot2docker and pulled the debian
+image (<code>docker pull debian</code>). If you&#39;re using Linux, you may want to add
+yourself to the docker group, restart the docker daemon and log in again - this
+will allow you to run Docker commands without prefixing them all with <code>sudo</code>.</p>
+<p>If the following works, you&#39;re good to go:</p>
+<pre class="hljs"><code>$ docker <span class="hljs-command">run</span> debian echo <span class="hljs-string">"hello world"</span>
+hello world</code></pre><h2 id="cowsay">Cowsay</h2>
+<p>During this tutorial, we&#39;re going to take the venerable Unix cowsay application
+and create a container to run it in (sometimes called dockerizing an
+application).</p>
+<h3 id="creating-an-image">Creating an Image</h3>
+<p>Start by getting a shell on a fresh debian image:</p>
+<pre class="hljs"><code>$ docker <span class="hljs-command">run</span> -<span class="hljs-keyword">it</span> <span class="hljs-comment">--name cowsay --hostname cowsay debian bash</span></code></pre><p>Now you should have an interactive shell. The next thing to do is to run
+<code>apt-get update</code> and install the cowsay and fortune utilities: </p>
+<pre class="hljs"><code>root@cowsay:/<span class="hljs-comment"># apt-get update</span>
+...snip updates...
+Reading package lists... Done
+root@cowsay:/<span class="hljs-comment"># apt-get install -y cowsay fortune</span>
+...snip lots of output...
+Setting up cowsay (<span class="hljs-number">3.03</span>+dfsg1-<span class="hljs-number">4</span>) <span class="hljs-keyword">...</span>
+root@cowsay:/<span class="hljs-comment">#</span></code></pre><p>Now you should be able to run cowsay:</p>
+<pre class="hljs"><code>root<span class="hljs-property">@cowsay</span>:/<span class="hljs-comment"># /usr/games/fortune | /usr/games/cowsay</span>
+ _____________________________________
+/ Writing <span class="hljs-keyword">is</span> easy; all you <span class="hljs-keyword">do</span> <span class="hljs-keyword">is</span> sit  <span class="hljs-string">\</span>
+| staring at the blank sheet <span class="hljs-keyword">of</span> paper |
+| <span class="hljs-keyword">until</span> drops <span class="hljs-keyword">of</span> blood form <span class="hljs-literal">on</span> your   |
+| forehead.                           |
+|                                     |
+<span class="hljs-string">\</span> -- Gene Fowler                      /
+ -------------------------------------
+        <span class="hljs-string">\</span>   ^__^
+         <span class="hljs-string">\</span>  (oo)<span class="hljs-string">\_______</span>
+            (__)<span class="hljs-string">\</span>       )<span class="hljs-string">\/\</span>
+                ||----w |
+                ||     ||</code></pre><p>Excellent. Now let&#39;s make an image from this container so that we don&#39;t have to
+do the installation step each time. We can do this using the <code>docker commit</code>
+command. It doesn&#39;t matter if the container is running or stopped. To do this,
+we need to give the command the name of the container (&quot;cowsay&quot;) a name for the
+image (&quot;cowsayimage&quot;) and the name of the repository to store it in (&quot;test&quot;),
+after exiting from the running container:</p>
+<pre class="hljs"><code>root<span class="hljs-variable">@cowsay</span><span class="hljs-symbol">:/</span><span class="hljs-comment"># exit</span>
+exit
+<span class="hljs-variable">$ </span>docker commit cowsay test/cowsayimage 
+d1795abbc71e14db39d24628ab335c58b0b45458060d1973af7acf113a0ce61d</code></pre><p>The returned value is the unique ID of our image. Now we have an image with
+cowsay installed that we can run:</p>
+<pre class="hljs"><code>$ docker run test/cowsayimage /usr/games/cowsay <span class="hljs-string">"Moo!"</span>
+ ______
+&lt; Moo! &gt;
+ ------
+        <span class="hljs-string">\</span>   ^__^
+         <span class="hljs-string">\</span>  (oo)<span class="hljs-string">\_______</span>
+            (__)<span class="hljs-string">\</span>       )<span class="hljs-string">\/\</span>
+                ||----w |
+                ||     ||</code></pre><p>This is great! However, there are a few problems. If we need to change
+something, we have to manually repeat our steps from that point, for example if
+we want to use a different base image we would have to start again from scratch.
+More importantly, it isn&#39;t easily <em>repeatable</em>; it&#39;s difficult and potentially
+error-prone to share or repeat the set of steps required to create the image.
+The solution to this is to use a <em>Dockerfile</em> to create a automated build for
+the image.</p>
+<h3 id="using-a-dockerfile">Using a Dockerfile</h3>
+<p>A Dockerfile is simply a text file that contains a set of steps that can be used
+to create a Docker image.</p>
+<p>Let&#39;s first make a Dockerfile in your current location.</p>
+<pre class="hljs"><code><span class="hljs-title">touch</span> Dockerfile</code></pre><p>Now use your favorite editor to edit this file and add the following:</p>
+<pre class="hljs"><code>FROM debian:wheezy
+
+RUN apt-<span class="hljs-built_in">get</span> <span class="hljs-keyword">update</span> &amp;&amp; apt-<span class="hljs-built_in">get</span> install -y cowsay fortune</code></pre><p>The <code>FROM</code> instruction specifies the base image to use (<code>debian</code>, as before, but
+this time we have specified that we want to use the version tagged <code>wheezy</code>). All
+Dockerfiles must have a <code>FROM</code> instruction as the first non-comment instruction.
+<code>RUN</code> instructions specify a shell command to execute inside the image. In this
+case we are just installing cowsay and fortune in the same way as we did before.</p>
+<p>If you save the above example into a file called <code>Dockerfile</code>, you can build the
+image by running the <code>docker build</code> command inside the same directory:</p>
+<pre class="hljs"><code>$ ls
+Dockerfile
+$ docker build -t test/cowsay-dockerfile .
+Sending build context to Docker daemon  <span class="hljs-number">2.56</span> kB
+Sending build context to Docker daemon 
+Step <span class="hljs-number">0</span> : FROM debian:wheezy
+ ---&gt; f6fab3b798be
+Step <span class="hljs-number">1</span> : RUN apt-get update &amp;amp;&amp;amp; apt-get install -y cowsay fortune
+ ---&gt; Running <span class="hljs-keyword">in</span> 29c7bd4b0adc
+
+...snip...
+
+Setting up cowsay (<span class="hljs-number">3.03</span>+dfsg1-<span class="hljs-number">4</span>) <span class="hljs-keyword">...</span>
+ ---&gt; dd66dc5a99bd
+Removing intermediate container 29c7bd4b0adc
+Successfully built dd66dc5a99bd</code></pre><p>Then we can run the image in the same way as before:</p>
+<pre class="hljs"><code>$ docker run test<span class="hljs-regexp">/cowsay-dockerfile /u</span>sr<span class="hljs-regexp">/games/</span>cowsay <span class="hljs-string">"Moo!"</span></code></pre><h3 id="using-an-entrypoint">Using an Entrypoint</h3>
+<p>But we can actually make things a little bit easier for the user by taking
+advantage of the <code>ENTRYPOINT</code> Dockerfile instruction. The <code>ENTRYPOINT</code>
+instruction lets us specify an executable that is used to handle any arguments
+passed to <code>docker run</code>.</p>
+<p>Add the following line to the bottom of the Dockerfile:</p>
+<pre class="hljs"><code><span class="hljs-title">ENTRYPOINT</span> [<span class="hljs-string">"/usr/games/cowsay"</span>]</code></pre><p>We can now rebuild and run the image without needing to specify the cowsay command:</p>
+<pre class="hljs"><code>$ docker build -t test/cowsay-dockerfile .
+.<span class="hljs-class">.snip</span>...
+$ docker run test/cowsay-dockerfile <span class="hljs-string">"Moo!"</span>
+..<span class="hljs-class">.snip</span>...</code></pre><p>Much easier! But now we&#39;ve lost the ability to use the fortune command inside
+the container as input to cowsay. We can fix this by providing our own script
+for the <code>ENTRYPOINT</code>, which is a common pattern when creating Dockerfiles.
+Create a file <code>entrypoint.sh</code> with the following contents and save it in the
+same directory as the Dockerfile.</p>
+<pre class="hljs"><code><span class="hljs-shebang">#!/bin/bash</span>
+<span class="hljs-keyword">if</span> [ <span class="hljs-variable">$#</span> <span class="hljs-operator">-eq</span> <span class="hljs-number">0</span> ]; <span class="hljs-keyword">then</span>
+    /usr/games/fortune | /usr/games/cowsay
+  <span class="hljs-keyword">else</span>
+    /usr/games/cowsay <span class="hljs-string">"<span class="hljs-variable">$@</span>"</span>
+<span class="hljs-keyword">fi</span></code></pre><p>Set the file to be executable with <code>chmod +x entrypoint.sh</code>.</p>
+<p>All this script does is pipe input from fortune into cowsay if it is called with
+no arguments, otherwise it calls cowsay with the given arguments. We next need
+to modify the Dockerfile to add the script into the image and call it with the
+<code>ENTRYPOINT</code> instruction. Edit the Dockerfile so that it looks like:</p>
+<pre class="hljs"><code>FROM debian:wheezy
+
+<span class="hljs-keyword">RUN</span> apt-get <span class="hljs-keyword">update</span> &amp;&amp; apt-get install -y cowsay fortune
+<span class="hljs-keyword">COPY</span> entrypoint.<span class="hljs-keyword">sh</span> .
+
+ENTRYPOINT [<span class="hljs-string">"/entrypoint.sh"</span>]</code></pre><p>The <code>COPY</code> instruction simply copies a file from the host into the image&#39;s
+filesystem, the first argument being the file on the host and the second the
+destination path, very similar to <code>cp</code>. </p>
+<p>Try building a new image and running containers with and without arguments:</p>
+<pre class="hljs"><code>$ docker build -t test/cowsay-dockerfile .
+...snip...
+$ docker run test/cowsay-dockerfile
+ ____________________________________
+/ The last thing one knows <span class="hljs-keyword">in</span>        <span class="hljs-string">\</span>
+| constructing a work <span class="hljs-keyword">is</span> what <span class="hljs-keyword">to</span> put |
+| first.                             |
+|                                    |
+<span class="hljs-string">\</span> -- Blaise Pascal                   /
+ ------------------------------------
+        <span class="hljs-string">\</span>   ^__^
+         <span class="hljs-string">\</span>  (oo)<span class="hljs-string">\_______</span>
+            (__)<span class="hljs-string">\</span>       )<span class="hljs-string">\/\</span>
+                ||----w |
+                ||     ||
+$ docker run test/cowsay-dockerfile Hello Moo!
+ ____________
+&lt; Hello Moo! &gt;
+ ------------
+        <span class="hljs-string">\</span>   ^__^
+         <span class="hljs-string">\</span>  (oo)<span class="hljs-string">\_______</span>
+            (__)<span class="hljs-string">\</span>       )<span class="hljs-string">\/\</span>
+                ||----w |
+                ||     ||</code></pre><h3 id="saving-images">Saving images</h3>
+<p>If we wanted to make this image available for others to use, we can push it to
+a registry. You can run your own private registry, or you can use the Docker
+Hub, which is free for public images. If you want to upload to the Hub, you
+first need to register on-line, then you can re-tag the image so that it is
+prefixed with your username and run push e.g:</p>
+<pre class="hljs"><code> <span class="hljs-variable">$ </span>docker tag test/cowsay-dockerfile username/cowsay
+ <span class="hljs-variable">$ </span>docker push username/cowsay</code></pre><h3 id="conclusion">Conclusion</h3>
+<p>In this tutorial, we&#39;ve shown how easily and quickly you can &quot;dockerize&quot; an
+existing application with little specialist knowledge. The resulting container
+holds all it&#39;s required dependencies, down to the OS level, meaning you can be
+confident that it will run on disparate and remote systems in exactly the same
+way that it runs on your local machine.</p>
+<h3 id="further-reading">Further Reading</h3>
+<p>This tutorial was based on material from &quot;Using Docker&quot;, available on early
+release on the O&#39;Reilly website: <a href="http://shop.oreilly.com/product/0636920035671.do">http://shop.oreilly.com/product/0636920035671.do</a></p>
+<p><a href="http://shop.oreilly.com/product/0636920035671.do"><img src="http://ecx.images-amazon.com/images/I/91xcS5fHp7L.jpg" width="300" title="Using Docker by Adrian Mouat" /></a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script type="text/javascript" src="assets/js/bootstrap.min.js"></script>
+</body>
+</html>
